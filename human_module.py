@@ -17,14 +17,14 @@ class Population:
     def generate_person_dict(self):
         return {
             "age": self.random_age(),
-            "infected": False,
             "alive": True,
-            "area": (random.uniform(-90, 90), random.uniform(-180, 180)),
+            "area": {"x": None, "y": None},
             "bmi": self.random_bmi(),
             "smoker": random.choice([True, False]),
             "days_infected": 0,
             "resistance": self.random_resistance(),
-            "previous_infections": []
+            "previous_infections": [],
+            "active_infection": None
         }
 
 
@@ -74,9 +74,10 @@ class SouthAmericanPopulation(Population):
 
 
 class Person:
-    def __init__(self, infected, alive, area, age, bmi, smoker, days_infected, resistance, previous_infections):
+    def __init__(self, alive, area, age, bmi, 
+                 smoker, days_infected, resistance, previous_infections, 
+                 active_infection):
         
-        self.infected = infected
         self.alive = alive
         self.area = area
         self.age = age
@@ -84,6 +85,7 @@ class Person:
         self.smoker = smoker
         self.resistance = resistance
         self.previous_infections = previous_infections
+        self.active_infection = active_infection
         self.days_infected = days_infected
         self.update_health()
         
@@ -98,12 +100,32 @@ class Person:
                 
         self.health = self.health
     
+    def transmit_disease(self, people_closeby):
+        #infect n people, n = infection_rate
+        #the number of people subject to infection should be picked as gaussian with mean = infection_rate and std = 1
+        if people_closeby is None:
+            return
+        
+        if self.active_infection is not None:
+            n_people = max(0, round(random.gauss(self.active_infection.infection_rate, 1)))
+
+            if n_people == 0:
+                return
+            
+            if n_people > len(people_closeby):
+                n_people = len(people_closeby)
+
+            people_subject_to_infection = random.sample(people_closeby, n_people)
+            
+            for person in people_subject_to_infection:
+                self.active_infection.infect(person)
+
+            
     
-        
-        
+    
     def __repr__(self):
         return (f"Person(age={self.age}, bmi={self.bmi:.2f}, smoker={self.smoker}, "
-                f"health={self.health}, infected={self.infected})")
+                f"health={self.health})")
         
         
 
@@ -120,76 +142,26 @@ class Virus:
         self.mutation_rate = mutation_rate
         
     def infect(self, person):
-            
-        if person.alive == False:
+        if not person.alive:
             return
-            
-        if person.infected:
-            return
-            
+                
         if person.resistance > 80:
-            person.infected = False
             return
 
-        else:
-            person.infected = True
+        previous_infection_names = [infection.name for infection in person.previous_infections]
+        if self.name in previous_infection_names:
             return
+
+        if person.active_infection is not None:
+            return
+
+        person.active_infection = self
     
     def __repr__(self):
         return f"Virus Name: {self.name}, Infection Rate: {self.infection_rate}, Mortality Rate: {self.mortality_rate}, Mutation Rate: {self.mutation_rate}"
                  
 
 
-
-class SimulateWorld:
-    def __init__(self, virus, people):
-        
-        self.virus = virus
-        self.people = people
-        
-        
-    
-    def increment_one_day(self):
-        
-        for person in self.people:
-            
-            if not person.alive:
-                continue
-            
-            person.age +=1/365
-                            
-            #person.location +=1
-            
-            if person.infected:
-                
-                
-                recovery_chance = 1-self.virus.mortality_rate*((person.resistance/100)+1)
-                death_risk = self.virus.mortality_rate
-                
-                recovery_chance /= 7
-                death_risk /=7
-                
-                no_change = 1 - (recovery_chance + death_risk)
-                
-                
-                
-                #also implement health here to calc the death risk
-                outcomes = ["recover", "death", "no_change"]
-                probabilities = [recovery_chance, death_risk, no_change]
-                outcome = random.choices(outcomes, probabilities)[0]
-                
-                if outcome == "death":
-                    person.alive = False
-                    continue
-                
-                if outcome == "recover":
-                    person.infected = False
-                    person.previous_infections = person.previous_infections.append(self.virus.name)
-                    person.days_infected = 0
-                    continue
-                
-                if outcome == "no_change":
-                    person.days_infected +=1
 
 influenza_virus_blueprint = {
     "name": "Influenza",
