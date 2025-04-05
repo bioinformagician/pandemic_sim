@@ -11,7 +11,8 @@ class Area:
         self.population.append(person)
     
     def get_coordinates(self):
-        return (self.x_coordinate, self.y_coordinate)
+        return {"x": self.x_coordinate,
+                "y": self.x_coordinate}
     
     def __repr__(self):
         return f"The area has {len(self.population)} people, an income of {self.income} and the cooridnates {self.x_coordinate, self.y_coordinate}, and hospital = {self.hospital}"
